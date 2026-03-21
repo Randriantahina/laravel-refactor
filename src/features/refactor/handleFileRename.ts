@@ -11,8 +11,12 @@ export class HandleFileRename {
   private updater = new FileUpdater();
   private scanner = new ProjectScanner();
   async execute(oldPath: string, newPath: string) {
-    if (!isPHPFile(newPath)) return;
-    if (!isLaravelFile(newPath)) return;
+    if (!isPHPFile(newPath)) {
+      return;
+    }
+    if (!isLaravelFile(newPath)) {
+      return;
+    }
 
     try {
       const ast = this.parser.parse(newPath);
@@ -44,7 +48,6 @@ export class HandleFileRename {
       const files = this.scanner.getAllPHPFiles(root);
 
       for (const file of files) {
-        // eslint-disable-next-line no-await-in-loop
         await this.updater.updateReferences(file, oldFull, newFull);
       }
     } catch (error) {

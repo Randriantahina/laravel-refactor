@@ -23,10 +23,18 @@ export class PhpParser {
     let className = '';
 
     const nameFromNode = (n: any) => {
-      if (!n) return '';
-      if (typeof n === 'string') return n;
-      if (typeof n.name === 'string') return n.name;
-      if (Array.isArray(n.parts)) return n.parts.join('\\');
+      if (!n) {
+        return '';
+      }
+      if (typeof n === 'string') {
+        return n;
+      }
+      if (typeof n.name === 'string') {
+        return n.name;
+      }
+      if (Array.isArray(n.parts)) {
+        return n.parts.join('\\');
+      }
       return '';
     };
 

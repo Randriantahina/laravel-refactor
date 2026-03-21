@@ -6,7 +6,10 @@ suite('PhpParser', () => {
   const parser = new PhpParser();
 
   test('extracts namespace and class when namespace exists', () => {
-    const file = path.join(__dirname, 'fixtures/parser/WithNamespace.php');
+    const file = path.resolve(
+      __dirname,
+      '../../src/test/fixtures/parser/WithNamespace.php',
+    );
     const ast = parser.parse(file);
     const info = parser.getClassInfo(ast);
 
@@ -15,7 +18,10 @@ suite('PhpParser', () => {
   });
 
   test('extracts class name when no namespace', () => {
-    const file = path.join(__dirname, 'fixtures/parser/NoNamespace.php');
+    const file = path.resolve(
+      __dirname,
+      '../../src/test/fixtures/parser/NoNamespace.php',
+    );
     const ast = parser.parse(file);
     const info = parser.getClassInfo(ast);
 
