@@ -55,7 +55,9 @@ export class HandleFileRename {
         newClass,
         true,
       );
-      if (resCur && resCur.length) dryResults.push(...resCur);
+      if (resCur && resCur.length) {
+        dryResults.push(...resCur);
+      }
 
       // 🌍 Scan project
       const root = path.dirname(newPath).split('/app/')[0];
@@ -68,7 +70,9 @@ export class HandleFileRename {
           newFull,
           true,
         );
-        if (res && res.length) dryResults.push(...res);
+        if (res && res.length) {
+          dryResults.push(...res);
+        }
       }
 
       if (dryResults.length === 0) {
