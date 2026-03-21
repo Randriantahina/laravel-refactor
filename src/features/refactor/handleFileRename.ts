@@ -3,6 +3,7 @@ import { RefactorService } from './refactorService';
 import { FileUpdater } from './fileUpdater';
 import { ProjectScanner } from './projectScanner';
 import { isPHPFile, isLaravelFile } from '../../utils/pathUtils';
+import * as vscode from 'vscode';
 import path from 'path';
 
 export class HandleFileRename {
@@ -19,10 +20,16 @@ export class HandleFileRename {
     }
 
     try {
-      const ast = this.parser.parse(newPath);
+      // Try to parse the old file to get previous namespace/class; fallback to newPath if old not available
+      let astOld: any;
+      try {
+        astOld = this.parser.parse(oldPath);
+      } catch (e) {
+        astOld = this.parser.parse(newPath);
+      }
 
       const { namespace: oldNamespace, className: oldClass } =
-        this.parser.getClassInfo(ast);
+        this.parser.getClassInfo(astOld);
 
       const newNamespace = this.refactor.getNamespaceFromPath(newPath);
       const newClass = this.refactor.getClassNameFromPath(newPath);
@@ -33,22 +40,65 @@ export class HandleFileRename {
       console.log('OLD:', oldFull);
       console.log('NEW:', newFull);
 
-      // 🔥 Update fichier actuel
+      // Dry-run: collect changes for current file and project references
+      const dryResults: {
+        file: string;
+        oldContent: string;
+        newContent: string;
+      }[] = [];
+
+      const resCur = await this.updater.updateClassAndNamespace(
+        newPath,
+        oldNamespace,
+        newNamespace,
+        oldClass,
+        newClass,
+        true,
+      );
+      if (resCur && resCur.length) dryResults.push(...resCur);
+
+      // 🌍 Scan project
+      const root = path.dirname(newPath).split('/app/')[0];
+      const files = this.scanner.getAllPHPFiles(root);
+
+      for (const file of files) {
+        const res = await this.updater.updateReferences(
+          file,
+          oldFull,
+          newFull,
+          true,
+        );
+        if (res && res.length) dryResults.push(...res);
+      }
+
+      if (dryResults.length === 0) {
+        void vscode.window.showInformationMessage('Aucun changement détecté.');
+        return;
+      }
+
+      // Prepare summary and ask confirmation
+      const summary = `Modifications détectées: ${dryResults.length} fichier(s). Appliquer les changements ?`;
+      const choice = await vscode.window.showInformationMessage(
+        summary,
+        'Apply changes',
+        'Cancel',
+      );
+      if (choice !== 'Apply changes') {
+        return;
+      }
+
+      // Apply changes
       await this.updater.updateClassAndNamespace(
         newPath,
         oldNamespace,
         newNamespace,
         oldClass,
         newClass,
+        false,
       );
 
-      // 🌍 Update tout le projet
-      const root = path.dirname(newPath).split('/app/')[0];
-
-      const files = this.scanner.getAllPHPFiles(root);
-
       for (const file of files) {
-        await this.updater.updateReferences(file, oldFull, newFull);
+        await this.updater.updateReferences(file, oldFull, newFull, false);
       }
     } catch (error) {
       // prefer VS Code error display in future improvements
