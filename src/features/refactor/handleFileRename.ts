@@ -11,6 +11,7 @@ export class HandleFileRename {
   private refactor = new RefactorService();
   private updater = new FileUpdater();
   private scanner = new ProjectScanner();
+  private output = vscode.window.createOutputChannel('Laravel Refactor');
   async execute(oldPath: string, newPath: string) {
     if (!isPHPFile(newPath)) {
       return;
@@ -20,19 +21,34 @@ export class HandleFileRename {
     }
 
     try {
-      // Try to parse the old file to get previous namespace/class; fallback to newPath if old not available
-      let astOld: any;
+      // Try to parse the old file to get previous namespace/class.
+      // Note: onDidRenameFiles fires after the file is moved, so oldPath may not exist.
+      let oldNamespace = '';
+      let oldClass = '';
       try {
-        astOld = this.parser.parse(oldPath);
+        const astOld = this.parser.parse(oldPath);
+        ({ namespace: oldNamespace, className: oldClass } =
+          this.parser.getClassInfo(astOld));
       } catch (e) {
-        astOld = this.parser.parse(newPath);
+        // Fallback: derive from path (PSR-4) when old file content isn't available
+        oldNamespace = this.refactor.getNamespaceFromPath(oldPath);
+        oldClass = this.refactor.getClassNameFromPath(oldPath);
+        this.output.appendLine(
+          `Could not parse old file content; derived from path: namespace=${oldNamespace}, class=${oldClass}`,
+        );
       }
-
-      const { namespace: oldNamespace, className: oldClass } =
-        this.parser.getClassInfo(astOld);
 
       const newNamespace = this.refactor.getNamespaceFromPath(newPath);
       const newClass = this.refactor.getClassNameFromPath(newPath);
+
+      // Log computed values for debugging
+      this.output.appendLine(`Computed values:`);
+      this.output.appendLine(`oldPath=${oldPath}`);
+      this.output.appendLine(`newPath=${newPath}`);
+      this.output.appendLine(`oldNamespace=${oldNamespace}`);
+      this.output.appendLine(`oldClass=${oldClass}`);
+      this.output.appendLine(`newNamespace=${newNamespace}`);
+      this.output.appendLine(`newClass=${newClass}`);
 
       const oldFull = this.refactor.buildFullClass(oldNamespace, oldClass);
       const newFull = this.refactor.buildFullClass(newNamespace, newClass);
@@ -80,8 +96,33 @@ export class HandleFileRename {
         return;
       }
 
-      // Prepare summary and ask confirmation
-      const summary = `Modifications détectées: ${dryResults.length} fichier(s). Appliquer les changements ?`;
+      // Log details to output channel for inspection
+      this.output.clear();
+      this.output.show(true);
+      this.output.appendLine(
+        `Dry-run results for rename ${oldPath} -> ${newPath}`,
+      );
+      dryResults.forEach((r) => {
+        this.output.appendLine(`--- ${r.file}`);
+        const oldLines = r.oldContent.split('\n');
+        const newLines = r.newContent.split('\n');
+        // show a small diff context
+        for (
+          let i = 0;
+          i < Math.min(10, Math.max(oldLines.length, newLines.length));
+          i++
+        ) {
+          const o = oldLines[i] || '';
+          const n = newLines[i] || '';
+          if (o !== n) {
+            this.output.appendLine(`- ${o}`);
+            this.output.appendLine(`+ ${n}`);
+          }
+        }
+      });
+
+      // Prepare summary and ask confirmation (user can inspect output panel)
+      const summary = `Modifications détectées: ${dryResults.length} fichier(s). Voir 'Laravel Refactor' output pour détails. Appliquer les changements ?`;
       const choice = await vscode.window.showInformationMessage(
         summary,
         'Apply changes',
