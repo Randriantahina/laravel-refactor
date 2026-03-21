@@ -4,12 +4,6 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-import * as vscode from 'vscode';
-
-function escapeRegex(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 export type DryRunResult = {
   file: string;
   oldContent: string;
