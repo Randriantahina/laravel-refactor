@@ -3,12 +3,13 @@ import { HandleFileRename } from './features/refactor/handleFileRename';
 
 export function activate(context: vscode.ExtensionContext) {
   const handler = new HandleFileRename();
-
-  vscode.workspace.onDidRenameFiles((event) => {
+  const disposable = vscode.workspace.onDidRenameFiles((event) => {
     for (const file of event.files) {
-      handler.execute(file.oldUri.fsPath, file.newUri.fsPath);
+      void handler.execute(file.oldUri.fsPath, file.newUri.fsPath);
     }
   });
+
+  context.subscriptions.push(disposable);
 }
 
 export function deactivate() {}

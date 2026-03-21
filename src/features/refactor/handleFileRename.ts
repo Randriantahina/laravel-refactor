@@ -10,10 +10,9 @@ export class HandleFileRename {
   private refactor = new RefactorService();
   private updater = new FileUpdater();
   private scanner = new ProjectScanner();
-
-  execute(oldPath: string, newPath: string) {
-    if (!isPHPFile(newPath)) {return;}
-    if (!isLaravelFile(newPath)) {return;}
+  async execute(oldPath: string, newPath: string) {
+    if (!isPHPFile(newPath)) return;
+    if (!isLaravelFile(newPath)) return;
 
     try {
       const ast = this.parser.parse(newPath);
@@ -31,7 +30,7 @@ export class HandleFileRename {
       console.log('NEW:', newFull);
 
       // 🔥 Update fichier actuel
-      this.updater.updateClassAndNamespace(
+      await this.updater.updateClassAndNamespace(
         newPath,
         oldNamespace,
         newNamespace,
@@ -44,10 +43,12 @@ export class HandleFileRename {
 
       const files = this.scanner.getAllPHPFiles(root);
 
-      files.forEach((file) => {
-        this.updater.updateReferences(file, oldFull, newFull);
-      });
+      for (const file of files) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.updater.updateReferences(file, oldFull, newFull);
+      }
     } catch (error) {
+      // prefer VS Code error display in future improvements
       console.error('Refactor error:', error);
     }
   }

@@ -22,18 +22,27 @@ export class PhpParser {
     let namespace = '';
     let className = '';
 
-    ast.children.forEach((node: any) => {
-      if (node.kind === 'namespace') {
-        namespace = node.name;
+    const nameFromNode = (n: any) => {
+      if (!n) return '';
+      if (typeof n === 'string') return n;
+      if (typeof n.name === 'string') return n.name;
+      if (Array.isArray(n.parts)) return n.parts.join('\\');
+      return '';
+    };
 
-        node.children?.forEach((child: any) => {
-          if (child.kind === 'class') {
+    // Iterate children to find namespace and class declarations
+    (ast.children || []).forEach((node: any) => {
+      if (node.kind === 'namespace') {
+        namespace = nameFromNode(node.name);
+
+        (node.children || []).forEach((child: any) => {
+          if (child.kind === 'class' && child.name) {
             className = child.name.name;
           }
         });
       }
 
-      if (node.kind === 'class') {
+      if (node.kind === 'class' && node.name) {
         className = node.name.name;
       }
     });
