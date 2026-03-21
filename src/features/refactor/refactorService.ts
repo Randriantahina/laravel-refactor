@@ -8,7 +8,7 @@ export class RefactorService {
   private psr4: Psr4Map | null = null;
 
   private loadPsr4Mappings(startPath: string): Psr4Map {
-    if (this.psr4) return this.psr4;
+    if (this.psr4) {return this.psr4;}
 
     let dir = path.dirname(startPath);
     let composerPath = '';
@@ -20,7 +20,7 @@ export class RefactorService {
         break;
       }
       const parent = path.dirname(dir);
-      if (parent === dir) break;
+      if (parent === dir) {break;}
       dir = parent;
     }
 
@@ -78,7 +78,7 @@ export class RefactorService {
 
     // Fallback to Laravel /app/ convention
     const appIndex = normalized.indexOf('/app/');
-    if (appIndex === -1) return '';
+    if (appIndex === -1) {return '';}
 
     const relative = normalized.substring(appIndex + 1);
 

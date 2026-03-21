@@ -12,8 +12,8 @@ export class HandleFileRename {
   private scanner = new ProjectScanner();
 
   execute(oldPath: string, newPath: string) {
-    if (!isPHPFile(newPath)) return;
-    if (!isLaravelFile(newPath)) return;
+    if (!isPHPFile(newPath)) {return;}
+    if (!isLaravelFile(newPath)) {return;}
 
     try {
       const ast = this.parser.parse(newPath);
