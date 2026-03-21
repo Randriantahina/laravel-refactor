@@ -5,6 +5,7 @@ import { ProjectScanner } from './projectScanner';
 import { isPHPFile, isLaravelFile } from '../../utils/pathUtils';
 import * as vscode from 'vscode';
 import path from 'path';
+import fs from 'fs';
 
 export class HandleFileRename {
   private parser = new PhpParser();
@@ -21,20 +22,44 @@ export class HandleFileRename {
     }
 
     try {
-      // Try to parse the old file to get previous namespace/class.
+      this.output.appendLine(
+        `execute() called with oldPath=${oldPath} newPath=${newPath}`,
+      );
+
+      if (!isPHPFile(newPath)) {
+        this.output.appendLine(`Skipped: not a PHP file: ${newPath}`);
+        return;
+      }
+      if (!isLaravelFile(newPath)) {
+        this.output.appendLine(
+          `Skipped: not inside /app/ (laravel file): ${newPath}`,
+        );
+        return;
+      }
+
+      this.output.appendLine(`File checks passed: isPHPFile & isLaravelFile`);
+      this.output.appendLine(
+        `oldPath exists: ${fs.existsSync(oldPath)}; newPath exists: ${fs.existsSync(newPath)}`,
+      );
+
       // Note: onDidRenameFiles fires after the file is moved, so oldPath may not exist.
       let oldNamespace = '';
       let oldClass = '';
       try {
-        const astOld = this.parser.parse(oldPath);
-        ({ namespace: oldNamespace, className: oldClass } =
-          this.parser.getClassInfo(astOld));
+        if (fs.existsSync(oldPath)) {
+          const astOld = this.parser.parse(oldPath);
+          ({ namespace: oldNamespace, className: oldClass } =
+            this.parser.getClassInfo(astOld));
+          this.output.appendLine(`Parsed old file content for ${oldPath}`);
+        } else {
+          throw new Error('oldPath does not exist');
+        }
       } catch (e) {
         // Fallback: derive from path (PSR-4) when old file content isn't available
         oldNamespace = this.refactor.getNamespaceFromPath(oldPath);
         oldClass = this.refactor.getClassNameFromPath(oldPath);
         this.output.appendLine(
-          `Could not parse old file content; derived from path: namespace=${oldNamespace}, class=${oldClass}`,
+          `Could not parse old file content; derived from path: namespace=${oldNamespace}, class=${oldClass}; error=${String(e)}`,
         );
       }
 
@@ -63,6 +88,7 @@ export class HandleFileRename {
         newContent: string;
       }[] = [];
 
+      this.output.appendLine(`Running dry-run for current file: ${newPath}`);
       const resCur = await this.updater.updateClassAndNamespace(
         newPath,
         oldNamespace,
@@ -71,6 +97,9 @@ export class HandleFileRename {
         newClass,
         true,
       );
+      this.output.appendLine(
+        `Dry-run current file returned ${Array.isArray(resCur) ? resCur.length : 0} results`,
+      );
       if (resCur && resCur.length) {
         dryResults.push(...resCur);
       }
@@ -78,20 +107,33 @@ export class HandleFileRename {
       // 🌍 Scan project
       const root = path.dirname(newPath).split('/app/')[0];
       const files = this.scanner.getAllPHPFiles(root);
+      this.output.appendLine(
+        `Scanning project root ${root}, found ${files.length} PHP files`,
+      );
 
       for (const file of files) {
-        const res = await this.updater.updateReferences(
-          file,
-          oldFull,
-          newFull,
-          true,
-        );
-        if (res && res.length) {
-          dryResults.push(...res);
+        try {
+          const res = await this.updater.updateReferences(
+            file,
+            oldFull,
+            newFull,
+            true,
+          );
+          if (res && res.length) {
+            this.output.appendLine(
+              `Dry-run found ${res.length} changes in ${file}`,
+            );
+            dryResults.push(...res);
+          }
+        } catch (err) {
+          this.output.appendLine(
+            `Error during dry-run updateReferences on ${file}: ${String(err)}`,
+          );
         }
       }
 
       if (dryResults.length === 0) {
+        this.output.appendLine('Dry-run found no changes.');
         void vscode.window.showInformationMessage('Aucun changement détecté.');
         return;
       }
@@ -129,10 +171,12 @@ export class HandleFileRename {
         'Cancel',
       );
       if (choice !== 'Apply changes') {
+        this.output.appendLine('User cancelled applying changes');
         return;
       }
 
       // Apply changes
+      this.output.appendLine('Applying changes...');
       await this.updater.updateClassAndNamespace(
         newPath,
         oldNamespace,
@@ -141,10 +185,20 @@ export class HandleFileRename {
         newClass,
         false,
       );
+      this.output.appendLine(`Applied class/namespace change to ${newPath}`);
 
       for (const file of files) {
-        await this.updater.updateReferences(file, oldFull, newFull, false);
+        try {
+          await this.updater.updateReferences(file, oldFull, newFull, false);
+          this.output.appendLine(`Applied references update to ${file}`);
+        } catch (err) {
+          this.output.appendLine(
+            `Error applying references update to ${file}: ${String(err)}`,
+          );
+        }
       }
+
+      this.output.appendLine('All apply attempts finished');
     } catch (error) {
       // prefer VS Code error display in future improvements
       console.error('Refactor error:', error);
