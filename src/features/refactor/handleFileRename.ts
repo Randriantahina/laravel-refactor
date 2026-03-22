@@ -13,30 +13,24 @@ export class HandleFileRename {
   private updater = new FileUpdater();
   private scanner = new ProjectScanner();
   private output = vscode.window.createOutputChannel('Laravel Refactor');
+
   async execute(oldPath: string, newPath: string) {
+    this.output.appendLine(
+      `execute() called with oldPath=${oldPath} newPath=${newPath}`,
+    );
+
     if (!isPHPFile(newPath)) {
+      this.output.appendLine(`Skipped: not a PHP file: ${newPath}`);
       return;
     }
     if (!isLaravelFile(newPath)) {
+      this.output.appendLine(
+        `Skipped: not inside /app/ (laravel file): ${newPath}`,
+      );
       return;
     }
 
     try {
-      this.output.appendLine(
-        `execute() called with oldPath=${oldPath} newPath=${newPath}`,
-      );
-
-      if (!isPHPFile(newPath)) {
-        this.output.appendLine(`Skipped: not a PHP file: ${newPath}`);
-        return;
-      }
-      if (!isLaravelFile(newPath)) {
-        this.output.appendLine(
-          `Skipped: not inside /app/ (laravel file): ${newPath}`,
-        );
-        return;
-      }
-
       this.output.appendLine(`File checks passed: isPHPFile & isLaravelFile`);
       this.output.appendLine(
         `oldPath exists: ${fs.existsSync(oldPath)}; newPath exists: ${fs.existsSync(newPath)}`,
@@ -104,15 +98,18 @@ export class HandleFileRename {
         dryResults.push(...resCur);
       }
 
-      // 🌍 Scan project
+      // Scan project
       const root = path.dirname(newPath).split('/app/')[0];
+      this.output.appendLine(`SCANNER: project root determined as ${root}`);
+
       const files = this.scanner.getAllPHPFiles(root);
-      this.output.appendLine(
-        `Scanning project root ${root}, found ${files.length} PHP files`,
-      );
+      this.output.appendLine(`SCANNER: found ${files.length} php files`);
 
       for (const file of files) {
         try {
+          this.output.appendLine(
+            `UPDATER: dry-run updateReferences in ${file}`,
+          );
           const res = await this.updater.updateReferences(
             file,
             oldFull,
@@ -175,6 +172,8 @@ export class HandleFileRename {
         return;
       }
 
+      console.log('UPDATER: apply update class and namespace for', newPath);
+
       // Apply changes
       this.output.appendLine('Applying changes...');
       await this.updater.updateClassAndNamespace(
@@ -200,7 +199,7 @@ export class HandleFileRename {
 
       this.output.appendLine('All apply attempts finished');
     } catch (error) {
-      // prefer VS Code error display in future improvements
+      this.output.appendLine(`Refactor error: ${String(error)}`);
       console.error('Refactor error:', error);
     }
   }
