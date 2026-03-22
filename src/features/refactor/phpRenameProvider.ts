@@ -11,8 +11,14 @@ function escapeRegex(s: string) {
 export class PhpRenameProvider implements vscode.RenameProvider {
   private refactor = new RefactorService();
   private scanner = new ProjectScanner();
+  /** Paths being renamed programmatically — onDidRenameFiles must skip these */
+  private pendingRenames = new Set<string>();
 
   constructor(private output: vscode.OutputChannel) {}
+
+  isPendingRename(oldUri: vscode.Uri): boolean {
+    return this.pendingRenames.has(oldUri.fsPath);
+  }
 
   prepareRename(
     document: vscode.TextDocument,
@@ -67,10 +73,15 @@ export class PhpRenameProvider implements vscode.RenameProvider {
     // 1. Rename the file to match the new class name
     const dir = path.dirname(filePath);
     const newUri = vscode.Uri.file(path.join(dir, `${newClassName}.php`));
+    // Mark this rename so onDidRenameFiles can ignore it (avoids double-processing)
+    this.pendingRenames.add(filePath);
+    setTimeout(() => this.pendingRenames.delete(filePath), 5000);
     edit.renameFile(document.uri, newUri, { overwrite: false });
     this.output.appendLine(`Renaming file: ${filePath} -> ${newUri.fsPath}`);
 
     // 2. Update class declaration inside the file
+    // IMPORTANT: use newUri (not document.uri) because VS Code applies renameFile
+    // operations BEFORE text edits — document.uri no longer exists at apply time.
     const text = document.getText();
     const classRegex = new RegExp(
       `((?:readonly\\s+)?(?:abstract\\s+)?class\\s+)${escapeRegex(oldClassName)}\\b`,
@@ -83,13 +94,16 @@ export class PhpRenameProvider implements vscode.RenameProvider {
       const end = document.positionAt(
         classMatch.index + classMatch[1].length + oldClassName.length,
       );
-      edit.replace(document.uri, new vscode.Range(start, end), newClassName);
+      edit.replace(newUri, new vscode.Range(start, end), newClassName);
     }
 
     // 3. Update all references across the project
-    const root = filePath.includes('/app/')
-      ? filePath.split('/app/')[0]
-      : path.dirname(filePath);
+    const wsFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+    const root = wsFolder
+      ? wsFolder.uri.fsPath
+      : filePath.includes('/app/')
+        ? filePath.split('/app/')[0]
+        : path.dirname(filePath);
     const files = this.scanner.getAllPHPFiles(root);
     this.output.appendLine(
       `Scanning ${files.length} PHP files for references...`,
