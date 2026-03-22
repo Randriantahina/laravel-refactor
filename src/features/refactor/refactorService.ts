@@ -44,13 +44,13 @@ export class RefactorService {
         if (Array.isArray(rel)) {
           rel.forEach((r) => {
             result.push({
-              namespace: ns.replace(/\\\\$/, ''),
+              namespace: ns.replace(/\\$/, ''),
               dir: path.resolve(path.dirname(composerPath), r),
             });
           });
         } else {
           result.push({
-            namespace: ns.replace(/\\\\$/, ''),
+            namespace: ns.replace(/\\$/, ''),
             dir: path.resolve(path.dirname(composerPath), rel as string),
           });
         }
@@ -77,7 +77,7 @@ export class RefactorService {
         const rel = normalized.substring(mapDir.length).replace(/^\//, '');
         const withoutExt = rel.replace(/\.php$/, '');
         const parts = withoutExt.split('/').slice(0, -1).filter(Boolean);
-        const nsParts = [m.namespace.replace(/\\\\$/, '')].concat(
+        const nsParts = [m.namespace.replace(/\\$/, '')].concat(
           parts.map((p) => p),
         );
         return nsParts.filter(Boolean).join('\\');

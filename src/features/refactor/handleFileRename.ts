@@ -12,7 +12,8 @@ export class HandleFileRename {
   private refactor = new RefactorService();
   private updater = new FileUpdater();
   private scanner = new ProjectScanner();
-  private output = vscode.window.createOutputChannel('Laravel Refactor');
+
+  constructor(private output: vscode.OutputChannel) {}
 
   async execute(oldPath: string, newPath: string) {
     this.output.appendLine(
@@ -36,24 +37,22 @@ export class HandleFileRename {
         `oldPath exists: ${fs.existsSync(oldPath)}; newPath exists: ${fs.existsSync(newPath)}`,
       );
 
-      // Note: onDidRenameFiles fires after the file is moved, so oldPath may not exist.
-      let oldNamespace = '';
+      // onDidRenameFiles fires after the file is moved — parse the NEW file
+      // to read the CURRENT class name (= old class name before any update).
       let oldClass = '';
+      let oldNamespace = '';
       try {
-        if (fs.existsSync(oldPath)) {
-          const astOld = this.parser.parse(oldPath);
-          ({ namespace: oldNamespace, className: oldClass } =
-            this.parser.getClassInfo(astOld));
-          this.output.appendLine(`Parsed old file content for ${oldPath}`);
-        } else {
-          throw new Error('oldPath does not exist');
-        }
+        const ast = this.parser.parse(newPath);
+        ({ namespace: oldNamespace, className: oldClass } =
+          this.parser.getClassInfo(ast));
+        this.output.appendLine(
+          `Parsed new file: class=${oldClass} namespace=${oldNamespace}`,
+        );
       } catch (e) {
-        // Fallback: derive from path (PSR-4) when old file content isn't available
         oldNamespace = this.refactor.getNamespaceFromPath(oldPath);
         oldClass = this.refactor.getClassNameFromPath(oldPath);
         this.output.appendLine(
-          `Could not parse old file content; derived from path: namespace=${oldNamespace}, class=${oldClass}; error=${String(e)}`,
+          `Parse failed, derived from path: class=${oldClass} namespace=${oldNamespace}; error=${String(e)}`,
         );
       }
 
