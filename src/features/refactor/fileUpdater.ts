@@ -121,12 +121,19 @@ export class FileUpdater {
 
     // Pass 2: if the short class name itself changed, replace standalone usages in code body
     // e.g. `new AccountDto(`, `AccountDto::class`, `: AccountDto`, `AccountDto $var`
+    // Skip if the new short name is already imported from a *different* namespace to avoid
+    // duplicate symbol errors (e.g. TodoDTO→Todo when App\Models\Todo already exists).
     if (oldClassName !== newClassName) {
-      const shortRegex = new RegExp(
-        `(?<![A-Za-z0-9_\\\\])${escapeRegex(oldClassName)}(?![A-Za-z0-9_\\\\])`,
-        'g',
-      );
-      content = content.replace(shortRegex, newClassName);
+      const conflictingImport = new RegExp(
+        `use\\s+(?!${escapeRegex(newFull)})[^;]*\\\\${escapeRegex(newClassName)};`,
+      ).test(content);
+      if (!conflictingImport) {
+        const shortRegex = new RegExp(
+          `(?<![A-Za-z0-9_\\\\])${escapeRegex(oldClassName)}(?![A-Za-z0-9_\\\\])`,
+          'g',
+        );
+        content = content.replace(shortRegex, newClassName);
+      }
     }
 
     if (dryRun) {

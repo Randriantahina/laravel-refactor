@@ -132,15 +132,21 @@ export class PhpRenameProvider implements vscode.RenameProvider {
 
         // Pass 2: Replace short class name usages in code body:
         // new OldClass(, OldClass::class, : OldClass, OldClass $var, etc.
-        // Only do this if the class name actually changed.
+        // Skip if the new short name is already imported from a *different* namespace to avoid
+        // duplicate symbol errors (e.g. TodoDTO→Todo when App\Models\Todo already exists).
         if (oldClassName !== newClassName) {
-          newContent = newContent.replace(
-            new RegExp(
-              `(?<![A-Za-z0-9_\\\\])${escapeRegex(oldClassName)}(?![A-Za-z0-9_\\\\])`,
-              'g',
-            ),
-            newClassName,
-          );
+          const conflictingImport = new RegExp(
+            `use\\s+(?!${escapeRegex(newFqcn)})[^;]*\\\\${escapeRegex(newClassName)};`,
+          ).test(newContent);
+          if (!conflictingImport) {
+            newContent = newContent.replace(
+              new RegExp(
+                `(?<![A-Za-z0-9_\\\\])${escapeRegex(oldClassName)}(?![A-Za-z0-9_\\\\])`,
+                'g',
+              ),
+              newClassName,
+            );
+          }
         }
 
         if (newContent !== content) {
