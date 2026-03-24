@@ -119,14 +119,26 @@ export class PhpRenameProvider implements vscode.RenameProvider {
         const content = doc.getText();
         let newContent = content;
 
-        // Replace `use` statements
+        // Pass 1: Replace FQCN occurrences (use statements, fully-qualified usages, with or without
+        // leading backslash). The negative lookahead prevents matching oldFqcn as a substring
+        // of an already-replaced newFqcn (e.g. AccountDto inside AccountDtos → AccountDtoss).
         newContent = newContent.replace(
-          new RegExp(`(use\\s+\\\\?)${escapeRegex(oldFqcn)}(\\s*;)`, 'gm'),
-          `$1${newFqcn}$2`,
+          new RegExp(`(\\\\?)${escapeRegex(oldFqcn)}(?![A-Za-z0-9_\\\\])`, 'g'),
+          (_, leading) => `${leading}${newFqcn}`,
         );
-        // Replace plain FQCN and with leading backslash
-        newContent = newContent.split(`\\${oldFqcn}`).join(`\\${newFqcn}`);
-        newContent = newContent.split(oldFqcn).join(newFqcn);
+
+        // Pass 2: Replace short class name usages in code body:
+        // new OldClass(, OldClass::class, : OldClass, OldClass $var, etc.
+        // Only do this if the class name actually changed.
+        if (oldClassName !== newClassName) {
+          newContent = newContent.replace(
+            new RegExp(
+              `(?<![A-Za-z0-9_\\\\])${escapeRegex(oldClassName)}(?![A-Za-z0-9_\\\\])`,
+              'g',
+            ),
+            newClassName,
+          );
+        }
 
         if (newContent !== content) {
           this.output.appendLine(`Updating references in ${f}`);
