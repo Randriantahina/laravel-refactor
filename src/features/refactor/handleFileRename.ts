@@ -1,6 +1,6 @@
 import { PhpParser } from './phpParser';
 import { RefactorService } from './refactorService';
-import { FileUpdater } from './fileUpdater';
+import { FileUpdater, hasUseConflict } from './fileUpdater';
 import { ProjectScanner } from './projectScanner';
 import { isPHPFile, isLaravelFile } from '../../utils/pathUtils';
 import * as vscode from 'vscode';
@@ -104,11 +104,23 @@ export class HandleFileRename {
       const files = this.scanner.getAllPHPFiles(root);
       this.output.appendLine(`SCANNER: found ${files.length} php files`);
 
+      const newClassName = newFull.split('\\').pop()!;
+      const conflictingFiles: string[] = [];
+
       for (const file of files) {
         try {
           this.output.appendLine(
             `UPDATER: dry-run updateReferences in ${file}`,
           );
+          const fileDoc = await vscode.workspace.openTextDocument(
+            vscode.Uri.file(file),
+          );
+          if (hasUseConflict(fileDoc.getText(), newFull, newClassName)) {
+            conflictingFiles.push(path.basename(file));
+            this.output.appendLine(
+              `  ⚠️ Conflit dans ${path.basename(file)}: '${newClassName}' déjà importé d'un autre namespace.`,
+            );
+          }
           const res = await this.updater.updateReferences(
             file,
             oldFull,
@@ -126,6 +138,13 @@ export class HandleFileRename {
             `Error during dry-run updateReferences on ${file}: ${String(err)}`,
           );
         }
+      }
+
+      if (conflictingFiles.length > 0) {
+        await vscode.window.showWarningMessage(
+          `⚠️ Conflit de nommage dans ${conflictingFiles.length} fichier(s) : '${newClassName}' est déjà importé d'un autre namespace. Ces fichiers ne seront pas entièrement mis à jour. Voir 'Laravel Refactor' output.`,
+        );
+        return; // annuler si conflit
       }
 
       if (dryResults.length === 0) {

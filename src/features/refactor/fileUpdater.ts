@@ -4,6 +4,17 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Returns true if `newShortName` is already imported from a different namespace than `newFull`. */
+export function hasUseConflict(
+  content: string,
+  newFull: string,
+  newShortName: string,
+): boolean {
+  return new RegExp(
+    `use\\s+(?!${escapeRegex(newFull)})[^;]*\\\\${escapeRegex(newShortName)};`,
+  ).test(content);
+}
+
 export type DryRunResult = {
   file: string;
   oldContent: string;

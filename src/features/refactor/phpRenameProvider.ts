@@ -112,6 +112,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
     );
 
     const modifiedFiles: string[] = [];
+    const conflictingFiles: string[] = [];
     for (const f of files) {
       if (f === filePath) {
         continue;
@@ -146,6 +147,11 @@ export class PhpRenameProvider implements vscode.RenameProvider {
               ),
               newClassName,
             );
+          } else {
+            conflictingFiles.push(path.basename(f));
+            this.output.appendLine(
+              `  ⚠️ Conflit dans ${path.basename(f)}: '${newClassName}' déjà importé d'un autre namespace.`,
+            );
           }
         }
 
@@ -167,6 +173,13 @@ export class PhpRenameProvider implements vscode.RenameProvider {
     const total = modifiedFiles.length + 1; // +1 for the renamed file itself
     this.output.show(true);
     this.output.appendLine(`\nTotal: ${total} fichier(s) à modifier.`);
+
+    if (conflictingFiles.length > 0) {
+      await vscode.window.showWarningMessage(
+        `⚠️ Conflit de nommage dans ${conflictingFiles.length} fichier(s) : '${newClassName}' est déjà importé d'un autre namespace. Ces fichiers ne seront pas entièrement mis à jour. Voir 'Laravel Refactor' output.`,
+      );
+      return new vscode.WorkspaceEdit(); // annuler si conflit
+    }
 
     const choice = await vscode.window.showInformationMessage(
       `Modifications détectées: ${total} fichier(s). Voir 'Laravel Refactor' output pour détails. Appliquer les changements ?`,
