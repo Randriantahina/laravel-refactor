@@ -65,10 +65,12 @@ export class PhpRenameProvider implements vscode.RenameProvider {
     const oldFqcn = this.refactor.buildFullClass(oldNamespace, oldClassName);
     const newFqcn = this.refactor.buildFullClass(oldNamespace, newClassName);
 
+    this.output.show(true);
     this.output.appendLine(
       `CLASS RENAME 🔥: ${oldClassName} -> ${newClassName}`,
     );
     this.output.appendLine(`FQCN: ${oldFqcn} -> ${newFqcn}`);
+    this.output.appendLine('Fichiers modifiés :');
 
     // 1. Rename the file to match the new class name
     const dir = path.dirname(filePath);
@@ -109,6 +111,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
       `Scanning ${files.length} PHP files for references...`,
     );
 
+    const modifiedFiles: string[] = [];
     for (const f of files) {
       if (f === filePath) {
         continue;
@@ -141,7 +144,8 @@ export class PhpRenameProvider implements vscode.RenameProvider {
         }
 
         if (newContent !== content) {
-          this.output.appendLine(`Updating references in ${f}`);
+          modifiedFiles.push(f);
+          this.output.appendLine(`  - ${f}`);
           const fullRange = new vscode.Range(
             doc.positionAt(0),
             doc.positionAt(content.length),
@@ -153,7 +157,23 @@ export class PhpRenameProvider implements vscode.RenameProvider {
       }
     }
 
-    this.output.appendLine('CLASS RENAME: all edits prepared ✅');
+    // Show summary and ask confirmation (same flow as file rename)
+    const total = modifiedFiles.length + 1; // +1 for the renamed file itself
+    this.output.show(true);
+    this.output.appendLine(`\nTotal: ${total} fichier(s) à modifier.`);
+
+    const choice = await vscode.window.showInformationMessage(
+      `Modifications détectées: ${total} fichier(s). Voir 'Laravel Refactor' output pour détails. Appliquer les changements ?`,
+      'Apply changes',
+      'Cancel',
+    );
+
+    if (choice !== 'Apply changes') {
+      this.output.appendLine('Rename cancelled by user.');
+      return new vscode.WorkspaceEdit(); // empty = nothing applied
+    }
+
+    this.output.appendLine('CLASS RENAME: all edits applied ✅');
     return edit;
   }
 }
