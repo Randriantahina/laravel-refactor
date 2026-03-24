@@ -40,7 +40,6 @@ export class PhpParser {
       return '';
     };
 
-    // Iterate children to find namespace and class declarations
     (ast.children || []).forEach((node: any) => {
       if (node.kind === 'namespace') {
         namespace = nameFromNode(node.name);

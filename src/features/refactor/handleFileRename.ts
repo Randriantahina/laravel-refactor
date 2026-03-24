@@ -37,8 +37,6 @@ export class HandleFileRename {
         `oldPath exists: ${fs.existsSync(oldPath)}; newPath exists: ${fs.existsSync(newPath)}`,
       );
 
-      // onDidRenameFiles fires after the file is moved — parse the NEW file
-      // to read the CURRENT class name (= old class name before any update).
       let oldClass = '';
       let oldNamespace = '';
       try {
@@ -59,7 +57,6 @@ export class HandleFileRename {
       const newNamespace = this.refactor.getNamespaceFromPath(newPath);
       const newClass = this.refactor.getClassNameFromPath(newPath);
 
-      // Log computed values for debugging
       this.output.appendLine(`Computed values:`);
       this.output.appendLine(`oldPath=${oldPath}`);
       this.output.appendLine(`newPath=${newPath}`);
@@ -74,7 +71,6 @@ export class HandleFileRename {
       console.log('OLD:', oldFull);
       console.log('NEW:', newFull);
 
-      // Dry-run: collect changes for current file and project references
       const dryResults: {
         file: string;
         oldContent: string;
@@ -97,7 +93,6 @@ export class HandleFileRename {
         dryResults.push(...resCur);
       }
 
-      // Scan project
       const root = path.dirname(newPath).split('/app/')[0];
       this.output.appendLine(`SCANNER: project root determined as ${root}`);
 
@@ -144,7 +139,7 @@ export class HandleFileRename {
         await vscode.window.showWarningMessage(
           `⚠️ Conflit de nommage dans ${conflictingFiles.length} fichier(s) : '${newClassName}' est déjà importé d'un autre namespace. Ces fichiers ne seront pas entièrement mis à jour. Voir 'Laravel Refactor' output.`,
         );
-        return; // annuler si conflit
+        return;
       }
 
       if (dryResults.length === 0) {
@@ -153,7 +148,6 @@ export class HandleFileRename {
         return;
       }
 
-      // Log details to output channel for inspection
       this.output.clear();
       this.output.show(true);
       this.output.appendLine(
@@ -178,7 +172,6 @@ export class HandleFileRename {
         }
       });
 
-      // Prepare summary and ask confirmation (user can inspect output panel)
       const summary = `Modifications détectées: ${dryResults.length} fichier(s). Voir 'Laravel Refactor' output pour détails. Appliquer les changements ?`;
       const choice = await vscode.window.showInformationMessage(
         summary,
@@ -192,7 +185,6 @@ export class HandleFileRename {
 
       console.log('UPDATER: apply update class and namespace for', newPath);
 
-      // Apply changes
       this.output.appendLine('Applying changes...');
       await this.updater.updateClassAndNamespace(
         newPath,

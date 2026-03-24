@@ -11,7 +11,6 @@ function escapeRegex(s: string) {
 export class PhpRenameProvider implements vscode.RenameProvider {
   private refactor = new RefactorService();
   private scanner = new ProjectScanner();
-  /** Paths being renamed programmatically — onDidRenameFiles must skip these */
   private pendingRenames = new Set<string>();
 
   constructor(private output: vscode.OutputChannel) {}
@@ -52,7 +51,6 @@ export class PhpRenameProvider implements vscode.RenameProvider {
     const edit = new vscode.WorkspaceEdit();
     const filePath = document.uri.fsPath;
 
-    // Old class name = current class name in file (may differ from filename)
     const line = document.getText().match(/\bclass\s+(\w+)/);
     const oldClassName = line ? line[1] : path.basename(filePath, '.php');
     const newClassName = newName;
@@ -72,18 +70,13 @@ export class PhpRenameProvider implements vscode.RenameProvider {
     this.output.appendLine(`FQCN: ${oldFqcn} -> ${newFqcn}`);
     this.output.appendLine('Fichiers modifiés :');
 
-    // 1. Rename the file to match the new class name
     const dir = path.dirname(filePath);
     const newUri = vscode.Uri.file(path.join(dir, `${newClassName}.php`));
-    // Mark this rename so onDidRenameFiles can ignore it (avoids double-processing)
     this.pendingRenames.add(filePath);
     setTimeout(() => this.pendingRenames.delete(filePath), 5000);
     edit.renameFile(document.uri, newUri, { overwrite: false });
     this.output.appendLine(`Renaming file: ${filePath} -> ${newUri.fsPath}`);
 
-    // 2. Update class declaration inside the file
-    // IMPORTANT: use newUri (not document.uri) because VS Code applies renameFile
-    // operations BEFORE text edits — document.uri no longer exists at apply time.
     const text = document.getText();
     const classRegex = new RegExp(
       `((?:readonly\\s+)?(?:abstract\\s+)?class\\s+)${escapeRegex(oldClassName)}\\b`,
@@ -99,7 +92,6 @@ export class PhpRenameProvider implements vscode.RenameProvider {
       edit.replace(newUri, new vscode.Range(start, end), newClassName);
     }
 
-    // 3. Update all references across the project
     const wsFolder = vscode.workspace.getWorkspaceFolder(document.uri);
     const root = wsFolder
       ? wsFolder.uri.fsPath
@@ -116,25 +108,18 @@ export class PhpRenameProvider implements vscode.RenameProvider {
     for (const f of files) {
       if (f === filePath) {
         continue;
-      } // already handled above
+      }
       try {
         const fileUri = vscode.Uri.file(f);
         const doc = await vscode.workspace.openTextDocument(fileUri);
         const content = doc.getText();
         let newContent = content;
 
-        // Pass 1: Replace FQCN occurrences (use statements, fully-qualified usages, with or without
-        // leading backslash). The negative lookahead prevents matching oldFqcn as a substring
-        // of an already-replaced newFqcn (e.g. AccountDto inside AccountDtos → AccountDtoss).
         newContent = newContent.replace(
           new RegExp(`(\\\\?)${escapeRegex(oldFqcn)}(?![A-Za-z0-9_\\\\])`, 'g'),
           (_, leading) => `${leading}${newFqcn}`,
         );
 
-        // Pass 2: Replace short class name usages in code body:
-        // new OldClass(, OldClass::class, : OldClass, OldClass $var, etc.
-        // Skip if the new short name is already imported from a *different* namespace to avoid
-        // duplicate symbol errors (e.g. TodoDTO→Todo when App\Models\Todo already exists).
         if (oldClassName !== newClassName) {
           const conflictingImport = new RegExp(
             `use\\s+(?!${escapeRegex(newFqcn)})[^;]*\\\\${escapeRegex(newClassName)};`,
@@ -169,8 +154,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
       }
     }
 
-    // Show summary and ask confirmation (same flow as file rename)
-    const total = modifiedFiles.length + 1; // +1 for the renamed file itself
+    const total = modifiedFiles.length + 1;
     this.output.show(true);
     this.output.appendLine(`\nTotal: ${total} fichier(s) à modifier.`);
 
@@ -178,7 +162,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
       await vscode.window.showWarningMessage(
         `⚠️ Conflit de nommage dans ${conflictingFiles.length} fichier(s) : '${newClassName}' est déjà importé d'un autre namespace. Ces fichiers ne seront pas entièrement mis à jour. Voir 'Laravel Refactor' output.`,
       );
-      return new vscode.WorkspaceEdit(); // annuler si conflit
+      return new vscode.WorkspaceEdit();
     }
 
     const choice = await vscode.window.showInformationMessage(
@@ -189,7 +173,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
 
     if (choice !== 'Apply changes') {
       this.output.appendLine('Rename cancelled by user.');
-      return new vscode.WorkspaceEdit(); // empty = nothing applied
+      return new vscode.WorkspaceEdit();
     }
 
     this.output.appendLine('CLASS RENAME: all edits applied ✅');

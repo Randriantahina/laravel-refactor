@@ -4,7 +4,6 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** Returns true if `newShortName` is already imported from a different namespace than `newFull`. */
 export function hasUseConflict(
   content: string,
   newFull: string,
@@ -22,9 +21,6 @@ export type DryRunResult = {
 }[];
 
 export class FileUpdater {
-  /**
-   * Update namespace and class in a file. If dryRun is true, returns the predicted changes without applying.
-   */
   async updateClassAndNamespace(
     filePath: string,
     oldNamespace: string,
@@ -89,10 +85,6 @@ export class FileUpdater {
     return;
   }
 
-  /**
-   * Update references across a file. Handles `use` statements and fully-qualified occurrences.
-   * If dryRun is true, returns predicted changes without applying.
-   */
   async updateReferences(
     filePath: string,
     oldFull: string,
@@ -111,7 +103,6 @@ export class FileUpdater {
       dryRun,
     });
 
-    // Extract short class names (last segment of the FQCN)
     const oldClassName = oldFull.includes('\\')
       ? oldFull.split('\\').pop()!
       : oldFull;
@@ -119,8 +110,6 @@ export class FileUpdater {
       ? newFull.split('\\').pop()!
       : newFull;
 
-    // Pass 1: replace FQCN occurrences (covers `use` statements and fully-qualified usage)
-    // with optional leading backslash, word-boundary guarded
     const fqcnRegex = new RegExp(
       `(\\\\?)${escapeRegex(oldFull)}(?![A-Za-z0-9_\\\\])`,
       'g',
@@ -130,10 +119,6 @@ export class FileUpdater {
       (_, leading) => `${leading}${newFull}`,
     );
 
-    // Pass 2: if the short class name itself changed, replace standalone usages in code body
-    // e.g. `new AccountDto(`, `AccountDto::class`, `: AccountDto`, `AccountDto $var`
-    // Skip if the new short name is already imported from a *different* namespace to avoid
-    // duplicate symbol errors (e.g. TodoDTO→Todo when App\Models\Todo already exists).
     if (oldClassName !== newClassName) {
       const conflictingImport = new RegExp(
         `use\\s+(?!${escapeRegex(newFull)})[^;]*\\\\${escapeRegex(newClassName)};`,

@@ -84,7 +84,6 @@ export class RefactorService {
       }
     }
 
-    // Fallback to Laravel /app/ convention
     const appIndex = normalized.indexOf('/app/');
     if (appIndex === -1) {
       console.log(
