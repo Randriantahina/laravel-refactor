@@ -6,11 +6,14 @@ function escapeRegex(s: string) {
 
 export function hasUseConflict(
   content: string,
+  oldFull: string,
   newFull: string,
   newShortName: string,
 ): boolean {
+  // A real conflict is a `use` statement that imports the same short name
+  // from a *different* namespace — but NOT the old import we're about to update.
   return new RegExp(
-    `use\\s+(?!${escapeRegex(newFull)})[^;]*\\\\${escapeRegex(newShortName)};`,
+    `use\\s+(?!${escapeRegex(newFull)})(?!${escapeRegex(oldFull)})[^;]*\\\\${escapeRegex(newShortName)};`,
   ).test(content);
 }
 

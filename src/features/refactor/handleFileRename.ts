@@ -110,7 +110,9 @@ export class HandleFileRename {
           const fileDoc = await vscode.workspace.openTextDocument(
             vscode.Uri.file(file),
           );
-          if (hasUseConflict(fileDoc.getText(), newFull, newClassName)) {
+          if (
+            hasUseConflict(fileDoc.getText(), oldFull, newFull, newClassName)
+          ) {
             conflictingFiles.push(path.basename(file));
             this.output.appendLine(
               `  ⚠️ Conflit dans ${path.basename(file)}: '${newClassName}' déjà importé d'un autre namespace.`,
