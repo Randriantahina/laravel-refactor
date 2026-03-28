@@ -138,8 +138,21 @@ export class HandleFileRename {
       }
 
       if (conflictingFiles.length > 0) {
+        this.output.appendLine(
+          `Conflict detected — reverting file rename: ${newPath} -> ${oldPath}`,
+        );
+
+        // Revert the physical rename so the workspace stays consistent
+        const revertEdit = new vscode.WorkspaceEdit();
+        revertEdit.renameFile(
+          vscode.Uri.file(newPath),
+          vscode.Uri.file(oldPath),
+          { overwrite: false },
+        );
+        await vscode.workspace.applyEdit(revertEdit);
+
         await vscode.window.showWarningMessage(
-          `Conflit de nommage dans ${conflictingFiles.length} fichier(s) : '${newClassName}' est déjà importé d'un autre namespace. Ces fichiers ne seront pas entièrement mis à jour. Voir 'Laravel Refactor' output.`,
+          `Conflit de nommage : '${newClassName}' est déjà utilisé dans ${conflictingFiles.length} fichier(s). Le fichier a été remis à son ancien nom. Voir 'Laravel Refactor' output.`,
         );
         return;
       }
