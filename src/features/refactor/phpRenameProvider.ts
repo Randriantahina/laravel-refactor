@@ -64,9 +64,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
     const newFqcn = this.refactor.buildFullClass(oldNamespace, newClassName);
 
     this.output.show(true);
-    this.output.appendLine(
-      `CLASS RENAME: ${oldClassName} -> ${newClassName}`,
-    );
+    this.output.appendLine(`CLASS RENAME: ${oldClassName} -> ${newClassName}`);
     this.output.appendLine(`FQCN: ${oldFqcn} -> ${newFqcn}`);
     this.output.appendLine('Fichiers modifiés :');
 
