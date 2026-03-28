@@ -115,7 +115,7 @@ export class HandleFileRename {
           ) {
             conflictingFiles.push(path.basename(file));
             this.output.appendLine(
-              `  ⚠️ Conflit dans ${path.basename(file)}: '${newClassName}' déjà importé d'un autre namespace.`,
+              `  [CONFLICT] ${path.basename(file)}: '${newClassName}' déjà importé d'un autre namespace.`,
             );
           }
           const res = await this.updater.updateReferences(
@@ -139,7 +139,7 @@ export class HandleFileRename {
 
       if (conflictingFiles.length > 0) {
         await vscode.window.showWarningMessage(
-          `⚠️ Conflit de nommage dans ${conflictingFiles.length} fichier(s) : '${newClassName}' est déjà importé d'un autre namespace. Ces fichiers ne seront pas entièrement mis à jour. Voir 'Laravel Refactor' output.`,
+          `Conflit de nommage dans ${conflictingFiles.length} fichier(s) : '${newClassName}' est déjà importé d'un autre namespace. Ces fichiers ne seront pas entièrement mis à jour. Voir 'Laravel Refactor' output.`,
         );
         return;
       }

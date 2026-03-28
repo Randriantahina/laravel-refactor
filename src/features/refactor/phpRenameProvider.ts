@@ -65,7 +65,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
 
     this.output.show(true);
     this.output.appendLine(
-      `CLASS RENAME 🔥: ${oldClassName} -> ${newClassName}`,
+      `CLASS RENAME: ${oldClassName} -> ${newClassName}`,
     );
     this.output.appendLine(`FQCN: ${oldFqcn} -> ${newFqcn}`);
     this.output.appendLine('Fichiers modifiés :');
@@ -135,7 +135,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
           } else {
             conflictingFiles.push(path.basename(f));
             this.output.appendLine(
-              `  ⚠️ Conflit dans ${path.basename(f)}: '${newClassName}' déjà importé d'un autre namespace.`,
+              `  [CONFLICT] ${path.basename(f)}: '${newClassName}' déjà importé d'un autre namespace.`,
             );
           }
         }
@@ -160,7 +160,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
 
     if (conflictingFiles.length > 0) {
       await vscode.window.showWarningMessage(
-        `⚠️ Conflit de nommage dans ${conflictingFiles.length} fichier(s) : '${newClassName}' est déjà importé d'un autre namespace. Ces fichiers ne seront pas entièrement mis à jour. Voir 'Laravel Refactor' output.`,
+        `Conflit de nommage dans ${conflictingFiles.length} fichier(s) : '${newClassName}' est déjà importé d'un autre namespace. Ces fichiers ne seront pas entièrement mis à jour. Voir 'Laravel Refactor' output.`,
       );
       return new vscode.WorkspaceEdit();
     }
@@ -176,7 +176,7 @@ export class PhpRenameProvider implements vscode.RenameProvider {
       return new vscode.WorkspaceEdit();
     }
 
-    this.output.appendLine('CLASS RENAME: all edits applied ✅');
+    this.output.appendLine('CLASS RENAME: all edits applied');
     return edit;
   }
 }

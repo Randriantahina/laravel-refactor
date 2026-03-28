@@ -7,7 +7,7 @@ import fs from 'fs';
 const output = vscode.window.createOutputChannel('Laravel Refactor');
 
 export function activate(context: vscode.ExtensionContext) {
-  output.appendLine('EXTENSION ACTIVE 🔥 Laravel Refactor activated');
+  output.appendLine('EXTENSION ACTIVE - Laravel Refactor activated');
   output.show(true);
 
   const handler = new HandleFileRename(output);
@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
   const phpRenameProvider = new PhpRenameProvider(output);
 
   const renameFileDisposable = vscode.workspace.onDidRenameFiles((event) => {
-    output.appendLine(`RENAME EVENT 🔥 — ${event.files.length} fichier(s)`);
+    output.appendLine(`RENAME EVENT - ${event.files.length} fichier(s)`);
     for (const file of event.files) {
       if (phpRenameProvider.isPendingRename(file.oldUri)) {
         output.appendLine(
