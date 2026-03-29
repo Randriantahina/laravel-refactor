@@ -37,15 +37,6 @@ export class FileUpdater {
     const original = doc.getText();
     let content = original;
 
-    console.log('UPDATER.updateClassAndNamespace', {
-      filePath,
-      oldNamespace,
-      newNamespace,
-      oldClass,
-      newClass,
-      dryRun,
-    });
-
     if (oldNamespace && newNamespace) {
       const escOldNs = escapeRegex(oldNamespace);
       const nsRegex = new RegExp(`(^\\s*namespace\\s+)${escOldNs}(\\s*;)`, 'm');
@@ -64,15 +55,12 @@ export class FileUpdater {
 
     if (dryRun) {
       if (content !== original) {
-        console.log('UPDATER.dryRun: changes detected for', filePath);
         return [{ file: filePath, oldContent: original, newContent: content }];
       }
-      console.log('UPDATER.dryRun: no changes for', filePath);
       return [];
     }
 
     if (content !== original) {
-      console.log('UPDATER: applying edit to', filePath);
       const fullRange = new vscode.Range(
         doc.positionAt(0),
         doc.positionAt(original.length),
@@ -81,9 +69,6 @@ export class FileUpdater {
       edit.replace(uri, fullRange, content);
       await vscode.workspace.applyEdit(edit);
       await doc.save();
-      console.log('UPDATER: applied edit to', filePath);
-    } else {
-      console.log('UPDATER: no changes to apply for', filePath);
     }
     return;
   }
@@ -98,13 +83,6 @@ export class FileUpdater {
     const doc = await vscode.workspace.openTextDocument(uri);
     const original = doc.getText();
     let content = original;
-
-    console.log('UPDATER.updateReferences', {
-      filePath,
-      oldFull,
-      newFull,
-      dryRun,
-    });
 
     const oldClassName = oldFull.includes('\\')
       ? oldFull.split('\\').pop()!
@@ -137,18 +115,12 @@ export class FileUpdater {
 
     if (dryRun) {
       if (content !== original) {
-        console.log(
-          'UPDATER.updateReferences dryRun: changes detected for',
-          filePath,
-        );
         return [{ file: filePath, oldContent: original, newContent: content }];
       }
-      console.log('UPDATER.updateReferences dryRun: no changes for', filePath);
       return [];
     }
 
     if (content !== original) {
-      console.log('UPDATER.updateReferences: applying edit to', filePath);
       const fullRange = new vscode.Range(
         doc.positionAt(0),
         doc.positionAt(original.length),
@@ -157,12 +129,6 @@ export class FileUpdater {
       edit.replace(uri, fullRange, content);
       await vscode.workspace.applyEdit(edit);
       await doc.save();
-      console.log('UPDATER.updateReferences: applied edit to', filePath);
-    } else {
-      console.log(
-        'UPDATER.updateReferences: no changes to apply for',
-        filePath,
-      );
     }
     return;
   }

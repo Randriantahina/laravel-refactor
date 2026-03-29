@@ -68,9 +68,6 @@ export class HandleFileRename {
       const oldFull = this.refactor.buildFullClass(oldNamespace, oldClass);
       const newFull = this.refactor.buildFullClass(newNamespace, newClass);
 
-      console.log('OLD:', oldFull);
-      console.log('NEW:', newFull);
-
       const dryResults: {
         file: string;
         oldContent: string;
@@ -198,8 +195,6 @@ export class HandleFileRename {
         return;
       }
 
-      console.log('UPDATER: apply update class and namespace for', newPath);
-
       this.output.appendLine('Applying changes...');
       await this.updater.updateClassAndNamespace(
         newPath,
@@ -225,7 +220,6 @@ export class HandleFileRename {
       this.output.appendLine('All apply attempts finished');
     } catch (error) {
       this.output.appendLine(`Refactor error: ${String(error)}`);
-      console.error('Refactor error:', error);
     }
   }
 }
