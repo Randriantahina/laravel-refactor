@@ -15,9 +15,7 @@ const engine = new parser.Engine({
 export class PhpParser {
   parse(filePath: string) {
     const code = fs.readFileSync(filePath, 'utf-8');
-    const ast = engine.parseCode(code, filePath);
-    console.log('PARSE OK:', filePath);
-    return ast;
+    return engine.parseCode(code, filePath);
   }
 
   getClassInfo(ast: any) {
@@ -56,7 +54,6 @@ export class PhpParser {
       }
     });
 
-    console.log('PARSE INFO:', { namespace, className });
     return { namespace, className };
   }
 }

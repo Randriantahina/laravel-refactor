@@ -19,7 +19,6 @@ export class RefactorService {
       const candidate = path.join(dir, 'composer.json');
       if (fs.existsSync(candidate)) {
         composerPath = candidate;
-        console.log('PSR-4 composer.json found at', composerPath);
         break;
       }
       const parent = path.dirname(dir);
@@ -57,10 +56,8 @@ export class RefactorService {
       });
 
       this.psr4 = result;
-      console.log('PSR-4 mappings loaded:', result);
       return this.psr4;
-    } catch (e) {
-      console.log('Error parsing composer.json for PSR-4 mappings', e);
+    } catch {
       this.psr4 = [];
       return this.psr4;
     }
@@ -73,7 +70,6 @@ export class RefactorService {
     for (const m of mappings) {
       const mapDir = normalizePath(m.dir);
       if (normalized.startsWith(mapDir)) {
-        console.log('RefactorService: matched PSR-4 mapping', m);
         const rel = normalized.substring(mapDir.length).replace(/^\//, '');
         const withoutExt = rel.replace(/\.php$/, '');
         const parts = withoutExt.split('/').slice(0, -1).filter(Boolean);
@@ -86,19 +82,11 @@ export class RefactorService {
 
     const appIndex = normalized.indexOf('/app/');
     if (appIndex === -1) {
-      console.log(
-        'RefactorService: no PSR-4 mapping and not inside /app/ for',
-        filePath,
-      );
       return '';
     }
 
     const relative = normalized.substring(appIndex + 1);
 
-    console.log(
-      'RefactorService: falling back to /app/ convention for',
-      filePath,
-    );
     return relative
       .replace('app/', 'App/')
       .replace('.php', '')
