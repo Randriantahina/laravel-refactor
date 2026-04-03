@@ -1,26 +1,41 @@
-# Laravel Refactor (VS Code Extension)
+# Laravel Refactor
 
-A powerful VS Code extension that automatically refactors your Laravel code when you rename or move PHP files.
+Extension VS Code qui refactorise automatiquement un projet Laravel quand vous renommez ou déplacez un fichier PHP.
 
----
+Elle ajuste le namespace, le nom de classe, les imports et les usages dans le reste du projet, y compris quand vous:
 
-## Features
-
-Automatically triggered on file rename inside VS Code.
-
-### What it does:
-
-- Updates **namespace** based on file location (PSR-4)
-- Renames the **class name** to match the file name
-- Updates all **references across the project**
-  - `use App\...`
-  - class imports
+- renommez un fichier PHP
+- déplacez un fichier dans un sous-dossier
+- renommez le dossier parent d’un ensemble de fichiers PHP
 
 ---
 
-## Example
+## Fonctionnalités
 
-### Before rename
+- Mise à jour du `namespace` selon l’emplacement PSR-4
+- Renommage de la classe pour qu’elle corresponde au nom du fichier
+- Mise à jour des références dans le projet
+  - imports `use ...`
+  - références FQCN comme `App\\Services\\TestService`
+  - usages du nom court quand c’est possible
+- Gestion des renommages de dossiers
+- Détection des conflits de nommage
+
+## Comportement en cas de conflit
+
+Si deux `use` dans un fichier importent déjà le même nom court depuis deux namespaces différents, l’extension affiche un message de conflit.
+
+Dans ce cas:
+
+- le renommage de classe est annulé pour ce fichier
+- le fichier est remis à son nom d’origine
+- un avertissement est affiché dans le panneau `Laravel Refactor`
+
+---
+
+## Exemple
+
+### Avant renommage
 
 ```php
 namespace App\Services;
@@ -32,9 +47,7 @@ class TestService {}
 use App\Services\TestService;
 ```
 
----
-
-### After renaming file → `UserService.php`
+### Après renommage du fichier en `UserService.php`
 
 ```php
 namespace App\Services;
@@ -48,67 +61,131 @@ use App\Services\UserService;
 
 ---
 
-## How it works
+## Comment ça marche
 
-- Uses **AST parsing** via `php-parser`
-- Detects namespace and class automatically
-- Applies Laravel **PSR-4 conventions**
-- Scans the entire project to update references
+- Analyse PHP via `php-parser`
+- Détection du namespace et de la classe à partir du fichier ou du chemin
+- Mise à jour des usages dans le projet
+- Application des conventions PSR-4 de Laravel
 
 ---
 
-## Requirements
+## Installation
+
+### Prérequis
 
 - VS Code
-- A Laravel project
-- PHP files located inside the `app/` directory
+- Un projet Laravel
+- Des fichiers PHP dans le dossier `app/`
 
-### Dependencies
+### Dépendances
 
 ```bash
-npm install php-parser glob
+pnpm install
 ```
 
 ---
 
-## Extension Settings
+## Utilisation
 
-Currently no custom settings.
-
----
-
-## Known Issues
-
-- Reference updates use simple string replacement (not full AST yet)
-- May affect edge cases (strings, comments)
-- Does not yet support:
-  - aliases (`use ... as ...`)
-  - multiple classes per file
-  - traits and interfaces
+1. Ouvrez votre projet Laravel dans VS Code
+2. Renommez un fichier PHP ou déplacez-le
+3. L’extension propose ou applique le refactor
+4. Vérifiez le panneau `Laravel Refactor` pour voir les changements et les éventuels conflits
 
 ---
 
-## 🛠️ Development
+## Développement
 
-### Run the extension
+### Compiler l’extension
 
 ```bash
-npm run compile
+pnpm run compile
 ```
 
-Then press:
+### Lancer en mode développement
 
 ```bash
 F5
 ```
 
+### Tester
+
+1. Ouvrez un projet Laravel dans l’`Extension Development Host`
+2. Renommez un fichier PHP dans `app/`
+3. Vérifiez que:
+   - le namespace est mis à jour
+   - le nom de classe suit le nouveau nom de fichier
+   - les imports et usages sont mis à jour
+
 ---
 
-### Test the extension
+## Publication sur le VS Code Marketplace
 
-1. Open a Laravel project in the **Extension Development Host**
-2. Rename a PHP file inside `app/`
-3. The extension will:
-   - Update namespace
-   - Update class name
-   - Update all references
+### 1. Préparer les métadonnées
+
+Avant de publier, vérifiez dans `package.json`:
+
+- `name`
+- `displayName`
+- `description`
+- `version`
+- `engines.vscode`
+- `publisher`
+
+Le champ `publisher` est obligatoire pour la publication.
+
+### 2. Installer l’outil de publication
+
+```bash
+npm install -g @vscode/vsce
+```
+
+### 3. Se connecter au Marketplace
+
+Créez un compte éditeur sur le [VS Code Marketplace](https://marketplace.visualstudio.com/vscode), puis générez un Personal Access Token côté Azure DevOps avec le scope `Marketplace: Manage`.
+
+Ensuite, enregistrez l’éditeur localement:
+
+```bash
+vsce login <publisher-id>
+```
+
+Le `<publisher-id>` doit correspondre au champ `publisher` de votre `package.json`.
+
+### 4. Packager l’extension
+
+```bash
+vsce package
+```
+
+Cette commande produit un fichier `.vsix` pour tester localement.
+
+### 5. Tester le `.vsix`
+
+```bash
+code --install-extension votre-extension.vsix
+```
+
+### 6. Publier
+
+Quand tout est validé:
+
+```bash
+vsce publish
+```
+
+Vous pouvez aussi laisser `vsce` incrémenter la version automatiquement:
+
+```bash
+vsce publish patch
+vsce publish minor
+vsce publish major
+```
+
+---
+
+## Notes
+
+- La mise à jour des références s’appuie sur des remplacements texte et non sur un refactoring AST complet pour tout le projet.
+- Les cas avancés comme les alias `use ... as ...`, les traits ou plusieurs classes dans un même fichier restent des zones à surveiller.
