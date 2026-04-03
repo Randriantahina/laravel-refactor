@@ -1,8 +1,20 @@
 {
   "name": "shanjeev-laravel-refactor",
-  "displayName": "laravel-refactor",
+  "displayName": "Laravel Refactor",
   "description": "Automatically refactor Laravel files, namespaces and usages.",
   "version": "0.0.1",
+  "icon": "assets/refactor.png",
+  "publisher": "Shanjeev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Randriantahina/laravel-refactor"
+  },
+  "keywords": [
+    "laravel",
+    "refactor",
+    "php",
+    "clean code"
+  ],
   "engines": {
     "vscode": "^1.110.0"
   },
@@ -13,7 +25,14 @@
     "onLanguage:php"
   ],
   "main": "./dist/extension.js",
-  "contributes": {},
+  "contributes": {
+    "commands": [
+      {
+        "command": "laravelRefactor.run",
+        "title": "Laravel Refactor: Run Refactor"
+      }
+    ]
+  },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
     "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
