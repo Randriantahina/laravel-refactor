@@ -64,16 +64,12 @@ export class PhpRenameProvider implements vscode.RenameProvider {
     const newFqcn = this.refactor.buildFullClass(oldNamespace, newClassName);
 
     this.output.show(true);
-    this.output.appendLine(`CLASS RENAME: ${oldClassName} -> ${newClassName}`);
-    this.output.appendLine(`FQCN: ${oldFqcn} -> ${newFqcn}`);
-    this.output.appendLine('Fichiers modifiés :');
 
     const dir = path.dirname(filePath);
     const newUri = vscode.Uri.file(path.join(dir, `${newClassName}.php`));
     this.pendingRenames.add(filePath);
     setTimeout(() => this.pendingRenames.delete(filePath), 5000);
     edit.renameFile(document.uri, newUri, { overwrite: false });
-    this.output.appendLine(`Renaming file: ${filePath} -> ${newUri.fsPath}`);
 
     const text = document.getText();
     const classRegex = new RegExp(
@@ -97,9 +93,6 @@ export class PhpRenameProvider implements vscode.RenameProvider {
         ? filePath.split('/app/')[0]
         : path.dirname(filePath);
     const files = this.scanner.getAllPHPFiles(root);
-    this.output.appendLine(
-      `Scanning ${files.length} PHP files for references...`,
-    );
 
     const modifiedFiles: string[] = [];
     const conflictingFiles: string[] = [];
@@ -140,7 +133,6 @@ export class PhpRenameProvider implements vscode.RenameProvider {
 
         if (newContent !== content) {
           modifiedFiles.push(f);
-          this.output.appendLine(`  - ${f}`);
           const fullRange = new vscode.Range(
             doc.positionAt(0),
             doc.positionAt(content.length),

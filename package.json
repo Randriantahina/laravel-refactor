@@ -10,17 +10,10 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "onLanguage:php"
   ],
   "main": "./dist/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "shanjeev-laravel-refactor.helloWorld",
-        "title": "Hello World"
-      }
-    ]
-  },
+  "contributes": {},
   "scripts": {
     "vscode:prepublish": "pnpm run package",
     "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
