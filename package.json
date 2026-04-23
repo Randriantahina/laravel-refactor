@@ -4,6 +4,7 @@
   "description": "Automatically refactor Laravel files, namespaces and usages.",
   "version": "0.0.1",
   "icon": "assets/refactor.png",
+  "license": "MIT",
   "publisher": "Shanjeev",
   "repository": {
     "type": "git",
